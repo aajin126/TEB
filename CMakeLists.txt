@@ -7,6 +7,13 @@ project(teb_planner_hj)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
+SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake_modules)
+
+find_package(Boost REQUIRED COMPONENTS system thread graph)
+find_package(SUITESPARSE REQUIRED)
+find_package(G2O REQUIRED)
+find_package(OpenCV REQUIRED)
+
 find_package(catkin REQUIRED COMPONENTS
   actionlib
   actionlib_msgs
@@ -19,9 +26,8 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
+  visualization_msgs
 )
-
-find_package(OpenCV REQUIRED)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -97,6 +103,8 @@ find_package(OpenCV REQUIRED)
 ##   * uncomment the "generate_dynamic_reconfigure_options" section below
 ##     and list every .cfg file to be processed
 
+## find_package(SuiteSparse REQUIRED)
+
 ## Generate dynamic reconfigure parameters in the 'cfg' folder
 # generate_dynamic_reconfigure_options(
 #   cfg/DynReconf1.cfg
@@ -112,11 +120,24 @@ find_package(OpenCV REQUIRED)
 ## LIBRARIES: libraries you create in this project that dependent projects also need
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
+
 catkin_package(
-   INCLUDE_DIRS include
+   INCLUDE_DIRS inc
    LIBRARIES ${PROJECT_NAME}
    CATKIN_DEPENDS actionlib actionlib_msg costmap_2d cv_bridge map_msgs move_base nav_msgs navfn roscpp rospy std_msgs
    DEPENDS OpenCV OpenMP
+)
+
+include_directories(
+  include
+  ${catkin_INCLUDE_DIRS}
+  ${catkin_INCLUDE_DIRS}
+  ${SUITESPARSE_INCLUDE_DIRS}
+  ${G2O_INCLUDE_DIR}
+  ${OpenCV_INCLUDE_DIRS}
+  /opt/ros/melodic/include  
+  /opt/ros/melodic/lib
+  /opt/ros/melodic/share
 )
 
 ###########
@@ -135,6 +156,14 @@ message("include " ${CATKIN_DEVEL_PREFIX})
 #   src/${PROJECT_NAME}/teb_planner_hj.cpp
 # )
 
+add_library(lib_teb
+        src/obstacles.cpp
+        src/optimal_planner.cpp
+        src/timed_elastic_band.cpp
+        src/teb_config.cpp
+        src/visualization.cpp
+)
+
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
@@ -144,6 +173,8 @@ message("include " ${CATKIN_DEVEL_PREFIX})
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/teb_planner_hj_node.cpp)
+add_executable(path_visualizer src/path_visualizer.cpp)
+add_executable(obstacle_visualizer src/obstacle_visualizer.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -159,6 +190,16 @@ message("include " ${CATKIN_DEVEL_PREFIX})
 # target_link_libraries(${PROJECT_NAME}_node
 #   ${catkin_LIBRARIES}
 # )
+target_link_libraries(path_visualizer ${catkin_LIBRARIES})
+target_link_libraries(obstacle_visualizer ${catkin_LIBRARIES})
+target_link_libraries(
+	lib_teb
+        ${SUITESPARSE_LIBRARIES}
+        ${G2O_LIBRARIES}
+        -lboost_system -lboost_thread -lboost_graph
+        ${OpenCV_LIBS}
+)
+
 
 #############
 ## Install ##
